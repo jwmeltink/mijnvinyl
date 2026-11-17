@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Platen">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#16181d">
+<title>Mijn platen</title>
+<style>
+:root{--bg:#16181d;--ink:#ece8df;--dim:#9a9a96;--line:#2c3038;--acc:#e0b04a;--sheet:#1f2229;
+ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:inherit}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+h1,h2{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;font-weight:600;margin:0}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+header h1{font-size:22px;flex:none}
+#q{flex:1;min-width:0;background:var(--sheet);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 12px;font-size:16px}
+button{font:inherit;color:var(--ink);background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer}
+button.primary{background:var(--acc);color:#1a1405;border-color:var(--acc);font-weight:600}
+button:focus-visible,input:focus-visible,.cover:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+html,body{height:100%;overflow:hidden}
+body{display:flex;flex-direction:column}
+header{flex:none}
+#bar{flex:none;display:flex;gap:12px;align-items:center;padding:8px 14px 0}
+#folder{flex:1;min-width:0;background:var(--sheet);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:16px}
+#folder:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#count{flex:none;color:var(--dim);font-size:14px}
+#stage{flex:1;min-height:0;position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;perspective:1100px;perspective-origin:50% 25%;touch-action:none;overflow:hidden;cursor:grab;user-select:none;-webkit-user-select:none}
+#crate{--s:min(80vw,46vh,440px);position:relative;width:var(--s);height:var(--s);flex:none;transform-style:preserve-3d}
+.rec{position:absolute;inset:0;transform-origin:50% 100%;will-change:transform,opacity}
+.rec .art{position:relative;width:100%;height:100%;border-radius:3px;overflow:hidden;background:var(--sheet);border-top:2px solid rgba(255,255,255,.16);box-shadow:0 10px 24px rgba(0,0,0,.55)}
+.rec img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;-webkit-user-drag:none}
+.rec .shade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+#cap{flex:none;text-align:center;padding:8px 18px 14px;min-height:88px}
+#cap h2{font-size:20px;line-height:1.2}
+#cap .artist{color:var(--acc);margin-top:2px}
+#cap small{display:block;margin-top:4px}
+#msg{padding:30px 20px;color:var(--dim);text-align:center}
+#msg.err{color:#f0907a}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:10}
+.overlay.open{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:92%;overflow:auto;background:var(--sheet);border-radius:18px 18px 0 0;padding:18px 18px calc(24px + env(safe-area-inset-bottom,0px));animation:up .22s ease-out}
+@media(min-width:700px){.sheet{left:50%;right:auto;width:560px;transform:translateX(-50%);animation:none}}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet .big{width:100%;max-width:340px;aspect-ratio:1;object-fit:cover;display:block;margin:4px auto 16px;border-radius:3px;box-shadow:0 8px 22px rgba(0,0,0,.5);background:var(--bg)}
+.sheet h2{font-size:24px;line-height:1.2}
+.sheet .artist{color:var(--acc);font-size:17px;margin:4px 0 12px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0 0 14px}
+dt{color:var(--dim)}dd{margin:0}
+ol.tracks{margin:0 0 14px;padding:0;list-style:none;border-top:1px solid var(--line)}
+ol.tracks li{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+ol.tracks .pos{width:34px;flex:none;color:var(--dim)}
+ol.tracks .dur{margin-left:auto;color:var(--dim)}
+.close{position:sticky;top:0;float:right}
+.row{display:flex;gap:8px;margin-bottom:12px}
+label{display:block;margin:12px 0 4px;color:var(--dim);font-size:14px}
+.sheet input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:16px}
+small{color:var(--dim)}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Platen</h1>
+  <input id="q" type="search" placeholder="Zoek artiest of titel" aria-label="Zoeken">
+  <button id="cfg" aria-label="Instellingen">⚙</button>
+</header>
+<div id="bar"><select id="folder" aria-label="Map"></select><span id="count"></span></div>
+<div id="msg"></div>
+<main id="stage"><div id="crate"></div></main>
+<div id="cap"></div>
+
+<div class="overlay" id="ov"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script>
+const API = "https://api.discogs.com";
+const DEFAULT_USER = "jwm.eltink";
+let cfg = { user: DEFAULT_USER, token: "", folder: 0 };
+let folders = [];
+let items = [];
+const detailCache = {};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function store(k, v){ try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch(e){ return null; } }
+function clean(n){ return String(n || "").replace(/\s\(\d+\)$/, ""); }
+function headers(){ const h = {}; if (cfg.token) h.Authorization = "Discogs token=" + cfg.token; return h; }
+
+function msg(t, err){ const m = $("#msg"); m.textContent = t || ""; m.className = err ? "err" : ""; m.style.display = t ? "block" : "none"; }
+
+async function getJSON(url){
+  const r = await fetch(url, { headers: headers() });
+  if (r.status === 429) throw new Error("Discogs vraagt even te wachten (te veel verzoeken). Probeer het over een minuut opnieuw.");
+  if (r.status === 404) throw new Error("Gebruiker niet gevonden. Controleer de gebruikersnaam in de instellingen.");
+  if (r.status === 401 || r.status === 403) throw new Error("Geen toegang. Controleer je token of zet je collectie op openbaar.");
+  if (!r.ok) throw new Error("Discogs gaf foutcode " + r.status + ".");
+  return r.json();
+}
+
+function fillFolders(){
+  const sel = $("#folder");
+  sel.innerHTML = folders.map(f => `<option value="${f.id}">${esc(f.id === 0 ? "Alle platen" : f.name)} (${f.count})</option>`).join("");
+  if (!folders.some(f => f.id === cfg.folder)) cfg.folder = 0;
+  sel.value = cfg.folder;
+}
+
+async function loadFolders(force){
+  let f = store("lp:folders:" + cfg.user);
+  if (!f || force){
+    try {
+      const d = await getJSON(`${API}/users/${encodeURIComponent(cfg.user)}/collection/folders`);
+      f = d.folders.map(x => ({ id: x.id, name: x.name, count: x.count }));
+      store("lp:folders:" + cfg.user, f);
+    } catch(e){ f = f || [{ id: 0, name: "Alle platen", count: 0 }]; }
+  }
+  folders = f; fillFolders();
+}
+
+async function load(force){
+  await loadFolders(force);
+  const key = "lp:items:" + cfg.user + ":" + cfg.folder;
+  const cached = store(key);
+  if (cached && !force){ items = cached; render(); return; }
+  msg("Collectie ophalen…");
+  try {
+    let page = 1, pages = 1, all = [];
+    do {
+      const d = await getJSON(`${API}/users/${encodeURIComponent(cfg.user)}/collection/folders/${cfg.folder}/releases?per_page=100&page=${page}&sort=artist&sort_order=asc`);
+      pages = d.pagination.pages;
+      all = all.concat(d.releases);
+      msg(`Collectie ophalen… ${all.length} van ${d.pagination.items}`);
+      page++;
+    } while (page <= pages);
+    items = all.map(r => {
+      const b = r.basic_information;
+      return { id: b.id, title: b.title, year: b.year, artist: b.artists.map(a => clean(a.name)).join(", "),
+        thumb: b.cover_image || b.thumb, labels: b.labels.map(l => clean(l.name)), genres: b.genres, styles: b.styles,
+        format: (b.formats || []).map(f => f.name + (f.descriptions ? " (" + f.descriptions.join(", ") + ")" : "")).join(", ") };
+    });
+    store(key, items);
+    render();
+  } catch(e){
+    msg(e.message === "Failed to fetch" ? "Geen verbinding met Discogs. Controleer je internet en probeer opnieuw." : e.message, true);
+  }
+}
+
+let list = [], pos = 0, lastIdx = -1, raf = 0, S = 300;
+const els = new Map();
+const crate = $("#crate"), stage = $("#stage");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clamp = v => Math.min(Math.max(v, 0), Math.max(list.length - 1, 0));
+
+function render(){
+  const q = $("#q").value.trim().toLowerCase();
+  list = items.filter(i => !q || (i.artist + " " + i.title).toLowerCase().includes(q));
+  pos = clamp(pos); lastIdx = -1;
+  els.forEach(e => e.remove()); els.clear();
+  $("#count").textContent = list.length ? list.length + " platen" : "";
+  msg(items.length && !list.length ? "Geen platen gevonden voor deze zoekopdracht." : (items.length ? "" : "Je collectie is leeg of nog niet geladen."));
+  layout();
+}
+
+function mk(i){
+  const e = document.createElement("div"); e.className = "rec";
+  e.innerHTML = `<div class="art"><img alt="" decoding="async" src="${esc(list[i].thumb)}" onerror="this.style.visibility='hidden'"><div class="shade"></div></div>`;
+  crate.appendChild(e); return e;
+}
+
+function place(e, d, i){
+  let ty, tz = 0, rx = 0, op = 1, sh = 0;
+  if (d >= 0){ ty = -d * 46; tz = -d * 60; sh = Math.min(d * 0.16, 0.7); op = d < 3.5 ? 1 : Math.max(0, 1 - (d - 3.5) * 2); }
+  else { const t = -d; ty = t * S * 0.8; rx = -t * 50; op = Math.max(0, 1 - t * 1.1); }
+  e.style.transform = `translate3d(0,${ty}px,${tz}px) rotateX(${rx}deg)`;
+  e.style.opacity = op; e.style.zIndex = 1000 - i;
+  e.firstChild.lastChild.style.opacity = sh;
+}
+
+function layout(){
+  S = crate.offsetWidth || 300;
+  const lo = Math.max(0, Math.floor(pos) - 1), hi = Math.min(list.length - 1, Math.ceil(pos) + 5);
+  els.forEach((e, i) => { if (i < lo || i > hi){ e.remove(); els.delete(i); } });
+  for (let i = lo; i <= hi; i++){ let e = els.get(i); if (!e){ e = mk(i); els.set(i, e); } place(e, i - pos, i); }
+  const idx = Math.round(pos);
+  if (idx !== lastIdx){
+    lastIdx = idx; const it = list[idx];
+    $("#cap").innerHTML = it ? `<h2>${esc(it.title)}</h2><div class="artist">${esc(it.artist)}${it.year ? " · " + it.year : ""}</div><small>${idx + 1} van ${list.length}</small>` : "";
+  }
+}
+
+function goTo(t){
+  t = clamp(Math.round(t)); cancelAnimationFrame(raf);
+  if (reduce){ pos = t; layout(); return; }
+  const step = () => { pos += (t - pos) * 0.2; if (Math.abs(t - pos) < 0.003){ pos = t; layout(); return; } layout(); raf = requestAnimationFrame(step); };
+  step();
+}
+
+let drag = null; const PX = 150;
+stage.addEventListener("pointerdown", e => {
+  if (!list.length) return;
+  cancelAnimationFrame(raf);
+  const n = performance.now();
+  drag = { y: e.clientY, p: pos, t: n, ly: e.clientY, lt: n, v: 0, moved: 0 };
+  stage.setPointerCapture(e.pointerId); stage.style.cursor = "grabbing";
+});
+stage.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const n = performance.now(), dt = n - drag.lt;
+  if (dt > 0){ drag.v = 0.7 * drag.v + 0.3 * ((e.clientY - drag.ly) / PX / dt); drag.ly = e.clientY; drag.lt = n; }
+  drag.moved = Math.max(drag.moved, Math.abs(e.clientY - drag.y));
+  pos = clamp(drag.p + (e.clientY - drag.y) / PX); layout();
+});
+function endDrag(e, cancel){
+  if (!drag) return;
+  const d = drag; drag = null; stage.style.cursor = "grab";
+  if (!cancel && d.moved < 8 && performance.now() - d.t < 400){ goTo(pos); const it = list[Math.round(pos)]; if (it) showAlbum(it.id); return; }
+  goTo(cancel ? pos : pos + d.v * 250);
+}
+stage.addEventListener("pointerup", e => endDrag(e, false));
+stage.addEventListener("pointercancel", e => endDrag(e, true));
+
+let wheelAcc = 0, wheelBusy = false;
+stage.addEventListener("wheel", e => {
+  e.preventDefault(); wheelAcc += e.deltaY;
+  if (Math.abs(wheelAcc) > 40 && !wheelBusy){ goTo(Math.round(pos) - Math.sign(wheelAcc)); wheelAcc = 0; wheelBusy = true; setTimeout(() => wheelBusy = false, 120); }
+}, { passive: false });
+window.addEventListener("resize", layout);
+
+function openSheet(html){ $("#sheet").innerHTML = html; $("#ov").classList.add("open"); $("#sheet").scrollTop = 0; const c = $("#sheet .close"); if (c) c.focus(); }
+function closeSheet(){ $("#ov").classList.remove("open"); }
+
+async function showAlbum(id){
+  const i = items.find(x => x.id == id); if (!i) return;
+  const head = `<button class="close" aria-label="Sluiten">Sluiten</button>
+    <img class="big" alt="Hoes van ${esc(i.title)}" src="${esc(i.thumb)}">
+    <h2>${esc(i.title)}</h2><div class="artist">${esc(i.artist)}</div>`;
+  const basics = `<dl>
+    ${i.year ? `<dt>Jaar</dt><dd>${i.year}</dd>` : ""}
+    ${i.labels.length ? `<dt>Label</dt><dd>${esc(i.labels.join(", "))}</dd>` : ""}
+    ${i.format ? `<dt>Formaat</dt><dd>${esc(i.format)}</dd>` : ""}
+    ${i.genres.length ? `<dt>Genre</dt><dd>${esc(i.genres.join(", "))}</dd>` : ""}
+    ${i.styles.length ? `<dt>Stijl</dt><dd>${esc(i.styles.join(", "))}</dd>` : ""}</dl>`;
+  const link = `<p><a href="https://www.discogs.com/release/${i.id}" target="_blank" rel="noopener">Open op Discogs</a></p>`;
+  openSheet(head + basics + `<p><small>Tracklist laden…</small></p>` + link);
+  try {
+    const d = detailCache[id] || (detailCache[id] = await getJSON(`${API}/releases/${id}`));
+    const tracks = (d.tracklist || []).filter(t => t.type_ !== "heading").map(t =>
+      `<li><span class="pos">${esc(t.position)}</span><span>${esc(t.title)}</span><span class="dur">${esc(t.duration)}</span></li>`).join("");
+    const notes = d.notes ? `<p>${esc(d.notes).replace(/\n/g, "<br>")}</p>` : "";
+    const country = d.country ? basics.replace("</dl>", `<dt>Land</dt><dd>${esc(d.country)}</dd></dl>`) : basics;
+    if ($("#ov").classList.contains("open") && $("#sheet h2") && $("#sheet h2").textContent === i.title)
+      $("#sheet").innerHTML = head + country + (tracks ? `<ol class="tracks">${tracks}</ol>` : "") + notes + link;
+    const c = $("#sheet .close"); if (c) c.focus();
+  } catch(e){
+    const p = $("#sheet small"); if (p) p.textContent = "Tracklist niet beschikbaar: " + e.message;
+  }
+}
+
+function showSettings(){
+  openSheet(`<button class="close" aria-label="Sluiten">Sluiten</button><h2>Instellingen</h2>
+    <label for="u">Discogs-gebruikersnaam</label><input id="u" value="${esc(cfg.user)}" autocapitalize="none" autocorrect="off">
+    <label for="t">Persoonlijk token (optioneel, aanbevolen)</label><input id="t" type="password" value="${esc(cfg.token)}" autocomplete="off">
+    <p><small>Maak een token aan bij Discogs onder Settings → Developers. Het wordt alleen op dit toestel bewaard.</small></p>
+    <div class="row"><button class="primary" id="save">Opslaan en laden</button><button id="refresh">Collectie vernieuwen</button></div>`);
+}
+
+document.addEventListener("click", e => {
+  if (e.target.closest(".close") || e.target === $("#ov")) return closeSheet();
+  if (e.target.id === "save"){ const nu = $("#u").value.trim() || DEFAULT_USER; cfg = { user: nu, token: $("#t").value.trim(), folder: nu === cfg.user ? cfg.folder : 0 }; store("lp:cfg", cfg); closeSheet(); items = []; render(); load(true); }
+  if (e.target.id === "refresh"){ closeSheet(); load(true); }
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") return closeSheet();
+  if ($("#ov").classList.contains("open") || e.target.tagName === "INPUT") return;
+  if (["ArrowDown","ArrowRight","PageDown"].includes(e.key)) goTo(Math.round(pos) + 1);
+  if (["ArrowUp","ArrowLeft","PageUp"].includes(e.key)) goTo(Math.round(pos) - 1);
+});
+$("#cfg").addEventListener("click", showSettings);
+$("#folder").addEventListener("change", e => { cfg.folder = Number(e.target.value); store("lp:cfg", cfg); pos = 0; items = []; render(); load(false); });
+$("#q").addEventListener("input", () => { pos = 0; render(); });
+
+cfg = Object.assign(cfg, store("lp:cfg") || {});
+load(false);
+</script>
+</body>
+</html>
